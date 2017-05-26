@@ -15,10 +15,11 @@
  */
 package io.gatling.jsonpath
 
-import java.lang.{ StringBuilder => JStringBuilder }
+import java.lang.{StringBuilder => JStringBuilder}
+
+import io.circe.Json
 
 import scala.util.parsing.combinator.RegexParsers
-
 import io.gatling.jsonpath.AST._
 
 object FastStringOps {
@@ -78,7 +79,7 @@ object Parser extends RegexParsers {
   def singleQuotedValue = "'" ~> SingleQuotedValueRegex <~ "'" ^^ (_.fastReplaceAll("\\'", "'"))
   def doubleQuotedValue = "\"" ~> DoubleQuotedValueRegex <~ "\"" ^^ (_.fastReplaceAll("\\\"", "\""))
   def quotedField: Parser[String] = singleQuotedField | doubleQuotedField
-  def quotedValue: Parser[String] = singleQuotedValue | doubleQuotedValue
+  def quotedValue: Parser[Json] = singleQuotedValue.map(Json.fromString) | doubleQuotedValue.map(Json.fromString)
 
   /// array parsers /////////////////////////////////////////////////////////
 
@@ -115,7 +116,7 @@ object Parser extends RegexParsers {
   /// filters parsers ///////////////////////////////////////////////////////
 
   def numberValue: Parser[JPNumber] = NumberValueRegex ^^ {
-    s => if (s.indexOf('.') != -1) JPDouble(s.toDouble) else JPLong(s.toLong)
+    s => if (s.indexOf('.') != -1) JPDouble(Json.fromDouble(s.toDouble).get) else JPLong(Json.fromLong(s.toLong))
   }
 
   def booleanValue: Parser[FilterDirectValue] =

@@ -15,32 +15,70 @@
  */
 package io.gatling.jsonpath
 
-import org.scalacheck.{ Gen, Arbitrary }
+import io.circe._
 import org.scalacheck.Arbitrary.arbitrary
+import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{ Matchers, FlatSpec }
+import org.scalatest.{FlatSpec, Matchers}
+import Ordered.orderingToOrdered
 
 class ComparisonOperatorsSpec
     extends FlatSpec
     with Matchers
     with GeneratorDrivenPropertyChecks {
 
+  lazy val genJsonString:Gen[Json] = for {
+    v <- arbitrary[String]
+  } yield Json.fromString(v)
+
+  lazy val genJsonBoolean:Gen[Json] = for {
+    v <- arbitrary[Boolean]
+  } yield Json.fromBoolean(v)
+
+  lazy val genJsonObj:Gen[Json] = for {
+    v <- arbitrary[String]
+  } yield Json.fromFields(Iterable(("test", Json.fromString(v))))
+
+  lazy val genJsonInt:Gen[Json] = for {
+    v <- arbitrary[Int]
+  } yield Json.fromInt(v)
+
+  lazy val genJsonLong:Gen[Json] = for {
+    v <- arbitrary[Long]
+  } yield Json.fromLong(v)
+
+  lazy val genJsonDouble:Gen[Json] = for {
+    v <- arbitrary[Double]
+  } yield Json.fromDouble(v).get
+
+  lazy val genJsonFloat:Gen[Json] = for {
+    v <- arbitrary[Float]
+  } yield Json.fromFloat(v).get
+
+  implicit val jsonOrdering: Ordering[Json] = (x: Json, y: Json) => {
+    (x, y) match {
+      case _ if x.isString && y.isString => x.asString.get.compare(y.asString.get)
+      case _ if x.isBoolean && y.isBoolean => x.asBoolean.get.compare(y.asBoolean.get)
+      case _ if x.isNumber && y.isNumber => x.asNumber.get.toBigDecimal.get.compare(y.asNumber.get.toBigDecimal.get)
+    }
+  }
+
   "comparison operators" should "return false if types aren't compatible" in {
-    forAll(arbitrary[String], arbitrary[AnyVal]) { (s, anyVal) =>
+    forAll(genJsonString, genJsonObj) { (s, anyVal) =>
       LessOperator(s, anyVal) shouldBe false
       GreaterOperator(s, anyVal) shouldBe false
       LessOrEqOperator(s, anyVal) shouldBe false
       GreaterOrEqOperator(s, anyVal) shouldBe false
     }
 
-    forAll(arbitrary[Boolean], arbitrary[String]) { (s, anyVal) =>
+    forAll(genJsonBoolean, genJsonString) { (s, anyVal) =>
       LessOperator(s, anyVal) shouldBe false
       GreaterOperator(s, anyVal) shouldBe false
       LessOrEqOperator(s, anyVal) shouldBe false
       GreaterOrEqOperator(s, anyVal) shouldBe false
     }
 
-    forAll(arbitrary[AnyVal], arbitrary[String]) { (s, anyVal) =>
+    forAll(genJsonObj, genJsonString) { (s, anyVal) =>
       LessOperator(s, anyVal) shouldBe false
       GreaterOperator(s, anyVal) shouldBe false
       LessOrEqOperator(s, anyVal) shouldBe false
@@ -49,7 +87,7 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Strings" in {
-    forAll(arbitrary[String], arbitrary[String]) { (val1, val2) =>
+    forAll(genJsonString, genJsonString) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
@@ -58,7 +96,7 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Booleans" in {
-    forAll(arbitrary[Boolean], arbitrary[Boolean]) { (val1, val2) =>
+    forAll(genJsonBoolean, genJsonBoolean) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
@@ -67,28 +105,28 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Int with other numeric types" in {
-    forAll(arbitrary[Int], arbitrary[Int]) { (val1, val2) =>
+    forAll(genJsonInt, genJsonInt) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Int], arbitrary[Long]) { (val1, val2) =>
+    forAll(genJsonInt, genJsonLong) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Int], arbitrary[Double]) { (val1, val2) =>
+    forAll(genJsonInt, genJsonDouble) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Int], arbitrary[Float]) { (val1, val2) =>
+    forAll(genJsonInt, genJsonFloat) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
@@ -97,28 +135,28 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Long with other numeric types" in {
-    forAll(arbitrary[Long], arbitrary[Int]) { (val1, val2) =>
+    forAll(genJsonLong, genJsonInt) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Long], arbitrary[Long]) { (val1, val2) =>
+    forAll(genJsonLong, genJsonLong) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Long], arbitrary[Double]) { (val1, val2) =>
+    forAll(genJsonLong, genJsonDouble) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Long], arbitrary[Float]) { (val1, val2) =>
+    forAll(genJsonLong, genJsonFloat) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
@@ -127,28 +165,28 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Double with other numeric types" in {
-    forAll(arbitrary[Double], arbitrary[Int]) { (val1, val2) =>
+    forAll(genJsonDouble, genJsonInt) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Double], arbitrary[Long]) { (val1, val2) =>
+    forAll(genJsonDouble, genJsonLong) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Double], arbitrary[Double]) { (val1, val2) =>
+    forAll(genJsonDouble, genJsonDouble) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Double], arbitrary[Float]) { (val1, val2) =>
+    forAll(genJsonDouble, genJsonFloat) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
@@ -157,28 +195,28 @@ class ComparisonOperatorsSpec
   }
 
   it should "properly compare Float with other numeric types" in {
-    forAll(arbitrary[Float], arbitrary[Int]) { (val1, val2) =>
+    forAll(genJsonFloat, genJsonInt) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Float], arbitrary[Long]) { (val1, val2) =>
+    forAll(genJsonFloat, genJsonLong) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Float], arbitrary[Double]) { (val1, val2) =>
+    forAll(genJsonFloat, genJsonDouble) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)
       GreaterOrEqOperator(val1, val2) shouldBe (val1 >= val2)
     }
 
-    forAll(arbitrary[Float], arbitrary[Float]) { (val1, val2) =>
+    forAll(genJsonFloat, genJsonFloat) { (val1, val2) =>
       LessOperator(val1, val2) shouldBe (val1 < val2)
       GreaterOperator(val1, val2) shouldBe (val1 > val2)
       LessOrEqOperator(val1, val2) shouldBe (val1 <= val2)

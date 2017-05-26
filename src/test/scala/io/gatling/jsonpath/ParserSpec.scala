@@ -15,8 +15,9 @@
  */
 package io.gatling.jsonpath
 
+import io.circe.Json
 import org.scalatest.FlatSpec
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import org.scalatest.matchers.{MatchResult, Matcher}
 import io.gatling.jsonpath.Parser._
 import io.gatling.jsonpath.AST._
 import org.scalatest.Matchers
@@ -212,19 +213,19 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
 
     // Check all supported ordering operators
     parse(subscriptFilter, "[?(@ == 2)]") should beParsedAs(
-      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPLong(2))
+      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ <= 2)]") should beParsedAs(
-      ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode)), JPLong(2))
+      ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ >= 2)]") should beParsedAs(
-      ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode)), JPLong(2))
+      ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ < 2)]") should beParsedAs(
-      ComparisonFilter(LessOperator, SubQuery(List(CurrentNode)), JPLong(2))
+      ComparisonFilter(LessOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ > 2)]") should beParsedAs(
-      ComparisonFilter(GreaterOperator, SubQuery(List(CurrentNode)), JPLong(2))
+      ComparisonFilter(GreaterOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ == true)]") should beParsedAs(
       ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPTrue)
@@ -238,13 +239,13 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
 
     // Trickier Json path expressions
     parse(subscriptFilter, "[?(@.foo == 2)]") should beParsedAs(
-      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("foo"))), JPLong(2))
+      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("foo"))), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(true == @.foo)]") should beParsedAs(
       ComparisonFilter(EqOperator, JPTrue, SubQuery(List(CurrentNode, Field("foo"))))
     )
     parse(subscriptFilter, "[?(2 == @['foo'])]") should beParsedAs(
-      ComparisonFilter(EqOperator, JPLong(2), SubQuery(List(CurrentNode, Field("foo"))))
+      ComparisonFilter(EqOperator, JPLong(Json.fromLong(2)), SubQuery(List(CurrentNode, Field("foo"))))
     )
 
     // Allow reference to the root object
@@ -254,17 +255,17 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
 
     new Parser().compile("$['points'][?(@['y'] >= 3)].id").get should be(RootNode
       :: Field("points")
-      :: ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode, Field("y"))), JPLong(3))
+      :: ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode, Field("y"))), JPLong(Json.fromLong(3)))
       :: Field("id") :: Nil)
 
     new Parser().compile("$.points[?(@['id']=='i4')].x").get should be(RootNode
       :: Field("points")
-      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString("i4"))
+      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
       :: Field("x") :: Nil)
 
     new Parser().compile("""$.points[?(@['id']=="i4")].x""").get should be(RootNode
       :: Field("points")
-      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString("i4"))
+      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
       :: Field("x") :: Nil)
   }
 
@@ -313,7 +314,7 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
       BooleanFilter(
         OrOperator,
         HasFilter(SubQuery(List(CurrentNode, Field("foo")))),
-        ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode, Field("bar"))), JPLong(2))
+        ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode, Field("bar"))), JPLong(Json.fromLong(2)))
       )
     )
   }

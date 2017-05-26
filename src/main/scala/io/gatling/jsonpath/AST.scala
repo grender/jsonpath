@@ -15,6 +15,8 @@
  */
 package io.gatling.jsonpath
 
+import io.circe.Json
+
 object AST {
   sealed trait AstToken
   sealed trait PathToken extends AstToken
@@ -47,16 +49,16 @@ object AST {
   case object CurrentNode extends PathToken
   sealed trait FilterValue extends AstToken
   sealed trait FilterDirectValue extends FilterValue {
-    def value: Any
+    def value: Json
   }
 
   sealed trait JPNumber extends FilterDirectValue
-  case class JPLong(value: Long) extends JPNumber
-  case class JPDouble(value: Double) extends JPNumber
-  case object JPTrue extends FilterDirectValue { val value = true }
-  case object JPFalse extends FilterDirectValue { val value = false }
-  case class JPString(value: String) extends FilterDirectValue
-  case object JPNull extends FilterDirectValue { val value = null }
+  case class JPLong(value: Json) extends JPNumber
+  case class JPDouble(value: Json) extends JPNumber
+  case object JPTrue extends FilterDirectValue { val value: Json = Json.fromBoolean(true) }
+  case object JPFalse extends FilterDirectValue { val value: Json = Json.fromBoolean(false) }
+  case class JPString(value: Json) extends FilterDirectValue
+  case object JPNull extends FilterDirectValue { val value: Json = Json.Null }
 
   case class SubQuery(path: List[PathToken]) extends FilterValue
 

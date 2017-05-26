@@ -1,44 +1,35 @@
 /**
- * Copyright 2011-2017 GatlingCorp (http://gatling.io)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+  * Copyright 2011-2017 GatlingCorp (http://gatling.io)
+  *
+  * Licensed under the Apache License, Version 2.0 (the "License");
+  * you may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at
+  *
+  *  http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
 package io.gatling.jsonpath
 
-import java.util.{ HashMap => JHashMap, List => JList }
-
-import scala.collection.JavaConverters._
-
-import org.scalatest.{ FlatSpec, Matchers }
-import org.scalatest.matchers.{ MatchResult, Matcher }
-
-import com.fasterxml.jackson.databind.ObjectMapper
+import io.circe.Json
+import io.circe.parser._
+import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.{FlatSpec, Matchers}
 
 class JsonPathSpec extends FlatSpec with Matchers with JsonPathMatchers {
 
-  val mapper = new ObjectMapper
-
-  def parseJson(s: String) = mapper.readValue(s, classOf[Object])
-  def bool(b: Boolean) = b
-  def int(i: Int) = i
-  def double(f: Double) = f
-  def text(s: String) = s
-  def nullNode: Any = null
-  def array(elts: Any*): JList[Any] = elts.asJava
-  def obj(elts: (String, Any)*) = elts.foldLeft(new JHashMap[String, Any]())((o: JHashMap[String, Any], e) => {
-    o.put(e._1, e._2)
-    o
-  })
+  def parseJson(s: String) = parse(s).right.get
+  def bool(b: Boolean) = Json.fromBoolean(b)
+  def int(i: Int) = Json.fromInt(i)
+  def double(f: Double) = Json.fromDouble(f).get
+  def text(s: String) = Json.fromString(s)
+  def nullNode: Json = Json.Null
+  def array(elts: Json*): Json = Json.fromValues(elts)
+  def obj(elts: (String, Json)*) = Json.fromFields(elts)
 
   // Goessner JSON exemple
 
@@ -786,12 +777,12 @@ class JsonPathSpec extends FlatSpec with Matchers with JsonPathMatchers {
 
   val valuesWithParensAndBraces =
     """{
-    |  "error": {
-    |     "id": 1,
-    |    "message1": "bar(baz)",
-    |    "message2": "bar[baz]"
-    |  }
-    |}""".stripMargin
+      |  "error": {
+      |     "id": 1,
+      |    "message1": "bar(baz)",
+      |    "message2": "bar[baz]"
+      |  }
+      |}""".stripMargin
 
   //////////////
 
@@ -1014,18 +1005,18 @@ class JsonPathSpec extends FlatSpec with Matchers with JsonPathMatchers {
 
   it should "not mess up with node with the same name at different depths in the hierarchy" in {
     val json = """{"foo":{"nico":{"nico":42}}}"""
-    JsonPath.query("""$..foo[?(@.nico)]""", parseJson(json)) should findElements(parseJson("""{"nico":{"nico":42}}}"""))
+    JsonPath.query("""$..foo[?(@.nico)]""", parseJson(json)) should findElements(parseJson("""{"nico":{"nico":42}}"""))
   }
 
   "`null` elements" should "be correctly handled" in {
     val fooNull = parseJson("""{"foo":null}""")
-    JsonPath.query("$.foo", fooNull) should findElements(null)
+    JsonPath.query("$.foo", fooNull) should findElements(Json.Null)
     JsonPath.query("$.foo.bar", fooNull) should findElements()
 
     val arrayWithNull = parseJson("""{"foo":[1,null,3,"woot"]}""")
-    JsonPath.query("$.foo[?(@==null)]", arrayWithNull) should findElements(null)
+    JsonPath.query("$.foo[?(@==null)]", arrayWithNull) should findElements(Json.Null)
     JsonPath.query("$.foo[?(@>=null)]", arrayWithNull) should findElements()
-    JsonPath.query("$.foo[?(@>=0.5)]", arrayWithNull) should findOrderedElements(1, 3)
+    JsonPath.query("$.foo[?(@>=0.5)]", arrayWithNull) should findOrderedElements(int(1), int(3))
   }
 
   "empty String value" should "be correctly handled" in {
@@ -1063,10 +1054,26 @@ class JsonPathSpec extends FlatSpec with Matchers with JsonPathMatchers {
     JsonPath.query("$..book[:2]", goessnerJson) should findOrderedElements(parseJson(book1), parseJson(book2))
   }
 
+  /*
+  val book1 = """{"category":"reference","author":"Nigel Rees","title":"Sayings of the Century","price":8.95}"""
+  val book2 = """{"category":"fiction","author":"Evelyn Waugh","title":"Sword of Honour","price":12.99}"""
+  val book3 = """{"category":"fiction","author":"Herman Melville","title":"Moby Dick","isbn":"0-553-21311-3","price":8.99}"""
+  val book4 = """{"category":"fiction","author":"J. R. R. Tolkien","title":"The Lord of the Rings","isbn":"0-395-19395-8","price":22.99}"""
+  val allBooks = s"[$book1,$book2,$book3,$book4]"
+  val bicycle = s"""{"color":"red","price":19.95}"""
+  val allStore = s"""{"book":$allBooks, "bicycle":$bicycle}"""
+  val goessnerData = s"""{"store":$allStore}"""
+  val goessnerJson = parseJson(goessnerData)
+   */
+
   it should "allow to get everything" in {
     JsonPath.query("$..*", goessnerJson) should findElements(goessnerJson, parseJson(allStore),
       parseJson(bicycle), text("red"), double(19.95),
       parseJson(allBooks),
+      parseJson(book1),
+      parseJson(book2),
+      parseJson(book3),
+      parseJson(book4),
       text("Nigel Rees"), text("Sayings of the Century"), text("reference"), double(8.95),
       text("Evelyn Waugh"), text("Sword of Honour"), text("fiction"), double(12.99),
       text("Herman Melville"), text("Moby Dick"), text("fiction"), double(8.99), text("0-553-21311-3"),
@@ -1132,8 +1139,8 @@ class JsonPathSpec extends FlatSpec with Matchers with JsonPathMatchers {
 
 trait JsonPathMatchers {
 
-  class OrderedElementsMatcher(expected: Traversable[Any]) extends Matcher[Either[JPError, Iterator[Any]]] {
-    override def apply(input: Either[JPError, Iterator[Any]]): MatchResult =
+  class OrderedElementsMatcher(expected: Iterable[Json]) extends Matcher[Either[JPError, Iterable[Json]]] {
+    override def apply(input: Either[JPError, Iterable[Json]]): MatchResult =
       input match {
         case Right(it) =>
           val seq = it.toVector
@@ -1149,10 +1156,10 @@ trait JsonPathMatchers {
         )
       }
   }
-  def findOrderedElements(expected: Any*) = new OrderedElementsMatcher(expected)
+  def findOrderedElements(expected: Json*) = new OrderedElementsMatcher(expected)
 
-  class ElementsMatcher(expected: Traversable[Any]) extends Matcher[Either[JPError, Iterator[Any]]] {
-    override def apply(input: Either[JPError, Iterator[Any]]): MatchResult =
+  class ElementsMatcher(expected: Iterable[Json]) extends Matcher[Either[JPError, Iterable[Json]]] {
+    override def apply(input: Either[JPError, Iterable[Json]]): MatchResult =
       input match {
         case Right(it) =>
           val actualSeq = it.toVector
@@ -1172,5 +1179,5 @@ trait JsonPathMatchers {
         )
       }
   }
-  def findElements(expected: Any*) = new ElementsMatcher(expected)
+  def findElements(expected: Json*) = new ElementsMatcher(expected)
 }
