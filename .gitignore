@@ -20,3 +20,7 @@ project/plugins/project/
 
 # IntelliJ IDEA specific
 .idea
+
+# vs code
+.bloop
+.metals

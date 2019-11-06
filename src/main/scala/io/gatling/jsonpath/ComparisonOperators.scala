@@ -1,5 +1,5 @@
-/**
- * Copyright 2011-2017 GatlingCorp (http://gatling.io)
+/*
+ * Copyright 2011-2019 GatlingCorp (https://gatling.io)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.gatling.jsonpath
 
 import io.circe.Json
@@ -27,26 +28,30 @@ sealed trait ComparisonWithOrderingOperator extends ComparisonOperator {
   def compare[T: Ordering](lhs: T, rhs: T): Boolean
 
   def apply(lhs: Json, rhs: Json): Boolean = lhs match {
-    case s1 if s1.isString => rhs match {
-      case s2 if s2.isString => compare(s1.asString.get, s2.asString.get)
-      case _ => false
-    }
-    case b1 if b1.isBoolean => rhs match {
-      case b2 if b2.isBoolean => compare(b1.asBoolean.get, b2.asBoolean.get)
-      case _ => false
-    }
-    case i1 if i1.isNumber => rhs match {
-      case i2 if i2.isNumber =>
-        (i1.asNumber.get.toBigDecimal, i2.asNumber.get.toBigDecimal) match {
-          case (Some(n1), Some(n2)) => compare(n1, n2)
-          case _ => false
-        }
-      case _ => false
-    }
-    case n1 if n1.isNull => rhs match {
-      case n2 if n2.isNull => false
-      case _ => false
-    }
+    case s1 if s1.isString =>
+      rhs match {
+        case s2 if s2.isString => compare(s1.asString.get, s2.asString.get)
+        case _                 => false
+      }
+    case b1 if b1.isBoolean =>
+      rhs match {
+        case b2 if b2.isBoolean => compare(b1.asBoolean.get, b2.asBoolean.get)
+        case _                  => false
+      }
+    case i1 if i1.isNumber =>
+      rhs match {
+        case i2 if i2.isNumber =>
+          (i1.asNumber.get.toBigDecimal, i2.asNumber.get.toBigDecimal) match {
+            case (Some(n1), Some(n2)) => compare(n1, n2)
+            case _                    => false
+          }
+        case _ => false
+      }
+    case n1 if n1.isNull =>
+      rhs match {
+        case n2 if n2.isNull => false
+        case _               => false
+      }
     case _ => false
   }
 }

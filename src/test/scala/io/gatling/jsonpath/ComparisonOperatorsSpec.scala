@@ -1,5 +1,5 @@
-/**
- * Copyright 2011-2017 GatlingCorp (http://gatling.io)
+/*
+ * Copyright 2011-2019 GatlingCorp (https://gatling.io)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,53 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.gatling.jsonpath
 
 import io.circe._
 import org.scalacheck.Arbitrary.arbitrary
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{ FlatSpec, Matchers }
 import Ordered.orderingToOrdered
 
-class ComparisonOperatorsSpec
-    extends FlatSpec
-    with Matchers
-    with GeneratorDrivenPropertyChecks {
+class ComparisonOperatorsSpec extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
 
-  lazy val genJsonString:Gen[Json] = for {
+  lazy val genJsonString: Gen[Json] = for {
     v <- arbitrary[String]
   } yield Json.fromString(v)
 
-  lazy val genJsonBoolean:Gen[Json] = for {
+  lazy val genJsonBoolean: Gen[Json] = for {
     v <- arbitrary[Boolean]
   } yield Json.fromBoolean(v)
 
-  lazy val genJsonObj:Gen[Json] = for {
+  lazy val genJsonObj: Gen[Json] = for {
     v <- arbitrary[String]
   } yield Json.fromFields(Iterable(("test", Json.fromString(v))))
 
-  lazy val genJsonInt:Gen[Json] = for {
+  lazy val genJsonInt: Gen[Json] = for {
     v <- arbitrary[Int]
   } yield Json.fromInt(v)
 
-  lazy val genJsonLong:Gen[Json] = for {
+  lazy val genJsonLong: Gen[Json] = for {
     v <- arbitrary[Long]
   } yield Json.fromLong(v)
 
-  lazy val genJsonDouble:Gen[Json] = for {
+  lazy val genJsonDouble: Gen[Json] = for {
     v <- arbitrary[Double]
   } yield Json.fromDouble(v).get
 
-  lazy val genJsonFloat:Gen[Json] = for {
+  lazy val genJsonFloat: Gen[Json] = for {
     v <- arbitrary[Float]
   } yield Json.fromFloat(v).get
 
   implicit val jsonOrdering: Ordering[Json] = (x: Json, y: Json) => {
     (x, y) match {
-      case _ if x.isString && y.isString => x.asString.get.compare(y.asString.get)
+      case _ if x.isString && y.isString   => x.asString.get.compare(y.asString.get)
       case _ if x.isBoolean && y.isBoolean => x.asBoolean.get.compare(y.asBoolean.get)
-      case _ if x.isNumber && y.isNumber => x.asNumber.get.toBigDecimal.get.compare(y.asNumber.get.toBigDecimal.get)
+      case _ if x.isNumber && y.isNumber   => x.asNumber.get.toBigDecimal.get.compare(y.asNumber.get.toBigDecimal.get)
     }
   }
 
