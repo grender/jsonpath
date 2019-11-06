@@ -1,5 +1,5 @@
-/**
- * Copyright 2011-2017 GatlingCorp (http://gatling.io)
+/*
+ * Copyright 2011-2019 GatlingCorp (https://gatling.io)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.gatling.jsonpath
 
 import io.circe.Json
 import org.scalatest.FlatSpec
-import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.matchers.{ MatchResult, Matcher }
 import io.gatling.jsonpath.Parser._
 import io.gatling.jsonpath.AST._
 import org.scalatest.Matchers
@@ -35,18 +36,19 @@ class StringSpec extends FlatSpec with Matchers {
 class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
 
   "Field parsing" should "work with standard names" in {
-      def shouldParseField(name: String) = {
-        val field = Field(name)
-        parse(dotField, s".$name") should beParsedAs(field)
-        parse(subscriptField, s"['$name']") should beParsedAs(field)
-        parse(subscriptField, s"""["$name"]""") should beParsedAs(field)
-      }
+    def shouldParseField(name: String) = {
+      val field = Field(name)
+      parse(dotField, s".$name") should beParsedAs(field)
+      parse(subscriptField, s"['$name']") should beParsedAs(field)
+      parse(subscriptField, s"""["$name"]""") should beParsedAs(field)
+    }
 
     shouldParseField("foo")
     shouldParseField("$foo")
     shouldParseField("Foo$1bar")
     shouldParseField("_1-2-3")
     shouldParseField("ñ1çölå$")
+    shouldParseField("#token")
   }
 
   it should "work with the root object" in {
@@ -128,28 +130,40 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
 
   // cf : http://goessner.net/articles/JsonPath
   "Expressions from Goessner specs" should "be correctly parsed" in {
-      def shouldParse(query: String, expected: Any) = {
-        new Parser().compile(query).get should be(expected)
-      }
+    def shouldParse(query: String, expected: Any) = {
+      new Parser().compile(query).get should be(expected)
+    }
 
-    shouldParse("$.store.book[0].title", List(
-      RootNode,
-      Field("store"),
-      Field("book"), ArrayRandomAccess(List(0)),
-      Field("title")
-    ))
-    shouldParse("$['store']['book'][0]['title']", List(
-      RootNode,
-      Field("store"),
-      Field("book"), ArrayRandomAccess(List(0)),
-      Field("title")
-    ))
-    shouldParse("$.store.book[*].author", List(
-      RootNode,
-      Field("store"),
-      Field("book"), ArraySlice(None, None),
-      Field("author")
-    ))
+    shouldParse(
+      "$.store.book[0].title",
+      List(
+        RootNode,
+        Field("store"),
+        Field("book"),
+        ArrayRandomAccess(List(0)),
+        Field("title")
+      )
+    )
+    shouldParse(
+      "$['store']['book'][0]['title']",
+      List(
+        RootNode,
+        Field("store"),
+        Field("book"),
+        ArrayRandomAccess(List(0)),
+        Field("title")
+      )
+    )
+    shouldParse(
+      "$.store.book[*].author",
+      List(
+        RootNode,
+        Field("store"),
+        Field("book"),
+        ArraySlice(None, None),
+        Field("author")
+      )
+    )
     shouldParse("$..author", List(RootNode, RecursiveField("author")))
     shouldParse("$.store.*", List(RootNode, Field("store"), AnyField))
     shouldParse("$.store..price", List(RootNode, Field("store"), RecursiveField("price")))
@@ -158,30 +172,36 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
     shouldParse("$..book[2]", List(RootNode, RecursiveField("book"), ArrayRandomAccess(List(2))))
     shouldParse("$.book[*]", List(RootNode, Field("book"), ArraySlice(None, None)))
     shouldParse("$..book[*]", List(RootNode, RecursiveField("book"), ArraySlice(None, None)))
-    shouldParse("$.store['store']..book['book'][0].title..title['title'].*..*.book[*]..book[*]", List(
-      RootNode,
-      Field("store"),
-      Field("store"),
-      RecursiveField("book"),
-      Field("book"), ArrayRandomAccess(List(0)),
-      Field("title"),
-      RecursiveField("title"),
-      Field("title"),
-      AnyField,
-      RecursiveAnyField,
-      Field("book"), ArraySlice(None, None),
-      RecursiveField("book"), ArraySlice(None, None)
-    ))
+    shouldParse(
+      "$.store['store']..book['book'][0].title..title['title'].*..*.book[*]..book[*]",
+      List(
+        RootNode,
+        Field("store"),
+        Field("store"),
+        RecursiveField("book"),
+        Field("book"),
+        ArrayRandomAccess(List(0)),
+        Field("title"),
+        RecursiveField("title"),
+        Field("title"),
+        AnyField,
+        RecursiveAnyField,
+        Field("book"),
+        ArraySlice(None, None),
+        RecursiveField("book"),
+        ArraySlice(None, None)
+      )
+    )
   }
 
   "Failures" should "be handled gracefully" in {
-      def gracefulFailure(query: String) =
-        new Parser().compile(query) match {
-          case Parser.Failure(msg, _) =>
-            info(s"""that's an expected failure for "$query": $msg""")
-          case other =>
-            fail(s"""a Failure was expected but instead, for "$query" got: $other""")
-        }
+    def gracefulFailure(query: String): Unit =
+      new Parser().compile(query) match {
+        case Parser.Failure(msg, _) =>
+          info(s"""that's an expected failure for "$query": $msg""")
+        case other =>
+          fail(s"""a Failure was expected but instead, for "$query" got: $other""")
+      }
 
     gracefulFailure("")
     gracefulFailure("foo")
@@ -202,10 +222,12 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
       HasFilter(SubQuery(List(CurrentNode, Field("foo"))))
     )
 
-    new Parser().compile("$.things[?(@.foo.bar)]").get should be(RootNode
-      :: Field("things")
-      :: HasFilter(SubQuery(CurrentNode :: Field("foo") :: Field("bar") :: Nil))
-      :: Nil)
+    new Parser().compile("$.things[?(@.foo.bar)]").get should be(
+      RootNode
+        :: Field("things")
+        :: HasFilter(SubQuery(CurrentNode :: Field("foo") :: Field("bar") :: Nil))
+        :: Nil
+    )
 
   }
 
@@ -215,25 +237,49 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
     parse(subscriptFilter, "[?(@ == 2)]") should beParsedAs(
       ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
+    parse(subscriptFilter, "[?(@==2)]") should beParsedAs(
+      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
+    )
     parse(subscriptFilter, "[?(@ <= 2)]") should beParsedAs(
+      ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
+    )
+    parse(subscriptFilter, "[?(@<=2)]") should beParsedAs(
       ComparisonFilter(LessOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ >= 2)]") should beParsedAs(
       ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
+    parse(subscriptFilter, "[?(@>=2)]") should beParsedAs(
+      ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
+    )
     parse(subscriptFilter, "[?(@ < 2)]") should beParsedAs(
+      ComparisonFilter(LessOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
+    )
+    parse(subscriptFilter, "[?(@<2)]") should beParsedAs(
       ComparisonFilter(LessOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
     parse(subscriptFilter, "[?(@ > 2)]") should beParsedAs(
       ComparisonFilter(GreaterOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
     )
+    parse(subscriptFilter, "[?(@>2)]") should beParsedAs(
+      ComparisonFilter(GreaterOperator, SubQuery(List(CurrentNode)), JPLong(Json.fromLong(2)))
+    )
     parse(subscriptFilter, "[?(@ == true)]") should beParsedAs(
+      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPTrue)
+    )
+    parse(subscriptFilter, "[?(@==true)]") should beParsedAs(
       ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPTrue)
     )
     parse(subscriptFilter, "[?(@ != false)]") should beParsedAs(
       ComparisonFilter(NotEqOperator, SubQuery(List(CurrentNode)), JPFalse)
     )
+    parse(subscriptFilter, "[?(@!=false)]") should beParsedAs(
+      ComparisonFilter(NotEqOperator, SubQuery(List(CurrentNode)), JPFalse)
+    )
     parse(subscriptFilter, "[?(@ == null)]") should beParsedAs(
+      ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPNull)
+    )
+    parse(subscriptFilter, "[?(@==null)]") should beParsedAs(
       ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), JPNull)
     )
 
@@ -253,20 +299,26 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
       ComparisonFilter(EqOperator, SubQuery(List(CurrentNode)), SubQuery(List(RootNode, Field("foo"))))
     )
 
-    new Parser().compile("$['points'][?(@['y'] >= 3)].id").get should be(RootNode
-      :: Field("points")
-      :: ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode, Field("y"))), JPLong(Json.fromLong(3)))
-      :: Field("id") :: Nil)
+    new Parser().compile("$['points'][?(@['y'] >= 3)].id").get should be(
+      RootNode
+        :: Field("points")
+        :: ComparisonFilter(GreaterOrEqOperator, SubQuery(List(CurrentNode, Field("y"))), JPLong(Json.fromLong(3)))
+        :: Field("id") :: Nil
+    )
 
-    new Parser().compile("$.points[?(@['id']=='i4')].x").get should be(RootNode
-      :: Field("points")
-      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
-      :: Field("x") :: Nil)
+    new Parser().compile("$.points[?(@['id']=='i4')].x").get should be(
+      RootNode
+        :: Field("points")
+        :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
+        :: Field("x") :: Nil
+    )
 
-    new Parser().compile("""$.points[?(@['id']=="i4")].x""").get should be(RootNode
-      :: Field("points")
-      :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
-      :: Field("x") :: Nil)
+    new Parser().compile("""$.points[?(@['id']=="i4")].x""").get should be(
+      RootNode
+        :: Field("points")
+        :: ComparisonFilter(EqOperator, SubQuery(List(CurrentNode, Field("id"))), JPString(Json.fromString("i4")))
+        :: Field("x") :: Nil
+    )
   }
 
   it should "work with some predefined boolean operators" in {
@@ -318,7 +370,6 @@ class ParserSpec extends FlatSpec with Matchers with ParsingMatchers {
       )
     )
   }
-
 }
 
 trait ParsingMatchers {
@@ -326,16 +377,18 @@ trait ParsingMatchers {
   class SuccessBeMatcher[+T <: AstToken](expected: T) extends Matcher[Parser.ParseResult[AstToken]] {
     def apply(left: Parser.ParseResult[AstToken]): MatchResult = {
       left match {
-        case Parser.Success(res, _) => MatchResult(
-          expected == res,
-          s"$res is not equal to expected value $expected",
-          s"$res is equal to $expected but it shouldn't be"
-        )
-        case Parser.NoSuccess(msg, _) => MatchResult(
-          false,
-          s"parsing issue, $msg",
-          s"parsing issue, $msg"
-        )
+        case Parser.Success(res, _) =>
+          MatchResult(
+            expected == res,
+            s"$res is not equal to expected value $expected",
+            s"$res is equal to $expected but it shouldn't be"
+          )
+        case Parser.NoSuccess(msg, _) =>
+          MatchResult(
+            matches = false,
+            s"parsing issue, $msg",
+            s"parsing issue, $msg"
+          )
       }
     }
   }
