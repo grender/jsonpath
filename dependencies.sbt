@@ -1,5 +1,5 @@
 libraryDependencies += "org.scala-lang.modules"     %% "scala-parser-combinators"  % "1.1.2"
-libraryDependencies += "io.circe"                   %% "circe-core"                % "0.8.0"
+libraryDependencies += "io.circe"                   %% "circe-core"                % "0.12.3"
 libraryDependencies += "org.scalatest"              %% "scalatest"                 % "3.0.8"  % "test"
 libraryDependencies += "org.scalacheck"             %% "scalacheck"                % "1.14.1" % "test"
-libraryDependencies += "io.circe"                   %% "circe-parser"              % "0.8.0"  % "test"
+libraryDependencies += "io.circe"                   %% "circe-parser"              % "0.12.3"  % "test"
