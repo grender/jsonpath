@@ -18,4 +18,4 @@ jobs:
     - name: build and push to packages
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TN }}
-      run: sbt "build publish"
+      run: sbt compile publish

@@ -17,3 +17,22 @@ useSonatypeRepositories := true
 githubPath := "grender/jsonpath"
 
 crossPaths := true
+
+// Guthub package publish settings 
+
+publishMavenStyle := true
+
+// GitHub package repo isn't supporting javadoc and sources
+publishArtifact in (Compile, packageDoc) := false
+publishArtifact in (Compile, packageSrc) := false
+
+externalResolvers += "GitHub grender Apache Maven Packages" at "https://maven.pkg.github.com/grender/jsonpath"
+publishTo := Some("GitHub grender Apache Maven Packages" at "https://maven.pkg.github.com/grender/jsonpath")
+
+sys.env.get("GITHUB_TOKEN") match {
+  case None => {
+    println("not found github token. not set credentials")
+    credentials ++= Seq() // stupid hack to do nothing
+  }
+  case Some(githubToken)=>credentials += Credentials("GitHub Package Registry", "maven.pkg.github.com", "grender", githubToken)
+}
